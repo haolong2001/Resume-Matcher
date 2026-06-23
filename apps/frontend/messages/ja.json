@@ -939,6 +939,28 @@
       }
     }
   },
+  "createResume": {
+    "entry": {
+      "kicker": "カスタマイズ履歴書の設定",
+      "title": "調整方法を選択",
+      "description": "AI のサポートを受けて履歴書を最適化するか、直接編集するためにコピーを作成します。",
+      "aiTailor": {
+        "kicker": "AI ガイド",
+        "title": "AI 調整",
+        "description": "LLM モデルを使用して、履歴書を求人内容に自動的に合わせます。",
+        "action": "AI 調整を開始",
+        "disabledHint": "LLM が設定されていないため、AI 調整は無効です。"
+      },
+      "manualEdit": {
+        "kicker": "セルフガイド",
+        "title": "手動編集",
+        "description": "マスター履歴書のコピーを作成して直接編集します。この応募を追跡するために、以下に求人内容を貼り付けてください。",
+        "action": "コピーを作成",
+        "creating": "調整用コピーを作成中...",
+        "error": "調整用コピーの作成に失敗しました。もう一度お試しください。"
+      }
+    }
+  },
   "tracker": {
     "scroll": {
       "prev": "左へスクロール",

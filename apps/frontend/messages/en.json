@@ -939,6 +939,28 @@
       }
     }
   },
+  "createResume": {
+    "entry": {
+      "kicker": "Tailor Resume Setup",
+      "title": "Choose your tailoring path",
+      "description": "Optimize your resume with AI assistance or create a copy for manual editing.",
+      "aiTailor": {
+        "kicker": "AI Guided",
+        "title": "AI Tailor",
+        "description": "Use LLM models to align your resume with a job description automatically.",
+        "action": "Start AI Tailoring",
+        "disabledHint": "AI Tailor is disabled because LLM is not configured."
+      },
+      "manualEdit": {
+        "kicker": "Self-Guided",
+        "title": "Manual Edit",
+        "description": "Create a copy of your master resume to edit directly. Paste the job description below to track this application.",
+        "action": "Create Copy",
+        "creating": "Creating tailored copy...",
+        "error": "Failed to create tailored copy. Please try again."
+      }
+    }
+  },
   "tracker": {
     "scroll": {
       "prev": "Scroll left",

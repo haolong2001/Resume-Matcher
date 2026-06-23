@@ -376,3 +376,20 @@ export async function fetchJobDescription(
   }
   return res.json();
 }
+
+/** Creates a tailored resume copy from the master resume, bypassing AI tailoring */
+export async function createResumeFromMaster(
+  masterResumeId: string,
+  jobDescription?: string
+): Promise<{ resume_id: string }> {
+  const res = await apiPost('/resumes/create-from-master', {
+    master_resume_id: masterResumeId,
+    job_description: jobDescription || null,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to create resume from master (status ${res.status}): ${text}`);
+  }
+  return res.json();
+}
+

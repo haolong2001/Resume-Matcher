@@ -762,7 +762,7 @@ const ResumeBuilderContent = () => {
 
               {/* Cover Letter Editor */}
               {activeTab === 'cover-letter' &&
-                (coverLetter ? (
+                (coverLetter !== null && coverLetter !== undefined ? (
                   <CoverLetterEditor
                     content={coverLetter}
                     onChange={setCoverLetter}
@@ -780,7 +780,7 @@ const ResumeBuilderContent = () => {
 
               {/* Outreach Editor */}
               {activeTab === 'outreach' &&
-                (outreachMessage ? (
+                (outreachMessage !== null && outreachMessage !== undefined ? (
                   <OutreachEditor
                     content={outreachMessage}
                     onChange={setOutreachMessage}
@@ -857,12 +857,12 @@ const ResumeBuilderContent = () => {
                   {
                     id: 'cover-letter',
                     label: t('builder.previewTabs.coverLetter'),
-                    disabled: !coverLetter,
+                    disabled: coverLetter === null || coverLetter === undefined,
                   },
                   {
                     id: 'outreach',
                     label: t('builder.previewTabs.outreach'),
-                    disabled: !outreachMessage,
+                    disabled: outreachMessage === null || outreachMessage === undefined,
                   },
                   {
                     id: 'jd-match',
@@ -887,7 +887,7 @@ const ResumeBuilderContent = () => {
 
               {/* Cover Letter Preview */}
               {activeTab === 'cover-letter' &&
-                (coverLetter && resumeData.personalInfo ? (
+                (coverLetter !== null && coverLetter !== undefined && resumeData.personalInfo ? (
                   <div className="p-6">
                     <CoverLetterPreview
                       content={coverLetter}
@@ -906,7 +906,7 @@ const ResumeBuilderContent = () => {
 
               {/* Outreach Preview */}
               {activeTab === 'outreach' &&
-                (outreachMessage ? (
+                (outreachMessage !== null && outreachMessage !== undefined ? (
                   <div className="p-6">
                     <OutreachPreview content={outreachMessage} />
                   </div>

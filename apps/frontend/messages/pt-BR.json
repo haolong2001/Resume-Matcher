@@ -939,6 +939,28 @@
       }
     }
   },
+  "createResume": {
+    "entry": {
+      "kicker": "Configuração do Currículo Personalizado",
+      "title": "Escolha seu caminho de personalização",
+      "description": "Otimize seu currículo com a ajuda de IA ou crie uma cópia para edição manual.",
+      "aiTailor": {
+        "kicker": "Guiado por IA",
+        "title": "Personalização por IA",
+        "description": "Use modelos de LLM para alinhar automaticamente seu currículo com a descrição da vaga.",
+        "action": "Iniciar Personalização por IA",
+        "disabledHint": "A Personalização por IA está desativada porque a LLM não está configurada."
+      },
+      "manualEdit": {
+        "kicker": "Autoguiado",
+        "title": "Edição Manual",
+        "description": "Crie uma cópia do seu currículo principal para editar diretamente. Cole a descrição da vaga abaixo para acompanhar esta candidatura.",
+        "action": "Criar Cópia",
+        "creating": "Criando cópia personalizada...",
+        "error": "Falha ao criar cópia personalizada. Tente novamente."
+      }
+    }
+  },
   "tracker": {
     "scroll": {
       "prev": "Rolar para a esquerda",

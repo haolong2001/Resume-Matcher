@@ -19,9 +19,12 @@ from app.config_cache import get_content_language, load_config as _load_config
 from app.database import db
 from app.pdf import render_resume_pdf, PDFRenderError
 from app.config import settings
+from app.llm import get_llm_config
 
 logger = logging.getLogger(__name__)
 from app.schemas import (
+    CreateFromMasterRequest,
+    CreateFromMasterResponse,
     GenerateContentResponse,
     ImproveResumeConfirmRequest,
     ImproveResumeRequest,
@@ -1873,3 +1876,170 @@ async def download_cover_letter_pdf(
         "Content-Disposition": f'attachment; filename="cover_letter_{resume_id}.pdf"'
     }
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
+@router.post("/create-from-master", response_model=CreateFromMasterResponse)
+async def create_from_master(
+    request: CreateFromMasterRequest,
+) -> CreateFromMasterResponse:
+    """Create a tailored resume copy from the master resume, bypassing AI tailoring."""
+    # 1. Fetch master resume, verify it exists, is master, and is ready
+    master = await db.get_resume(request.master_resume_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="Master resume not found")
+    if not master.get("is_master"):
+        raise HTTPException(status_code=400, detail="Specified resume is not a master resume")
+    if master.get("processing_status") != "ready":
+        raise HTTPException(status_code=400, detail="Master resume is not in ready status")
+
+    # 2. Extract and validate processed_data
+    processed_data = master.get("processed_data")
+    if not processed_data and master.get("content_type") == "json":
+        try:
+            processed_data = json.loads(master["content"])
+        except Exception:
+            pass
+    if not processed_data:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot manually edit unstructured resume. Processed data is missing."
+        )
+
+    processed_data = copy.deepcopy(processed_data)
+    processed_data = normalize_resume_data(processed_data)
+
+    try:
+        validated = ResumeData.model_validate(processed_data)
+        validated_data = validated.model_dump()
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid resume structured data: {str(e)}"
+        )
+
+    # Determine default title
+    master_title = master.get("title")
+    if master_title:
+        if "Master" in master_title:
+            title = master_title.replace("Master", "Tailored")
+        else:
+            title = f"{master_title} Tailored"
+    else:
+        personal_info = validated_data.get("personalInfo", {})
+        name = personal_info.get("name", "") if isinstance(personal_info, dict) else ""
+        if name:
+            title = f"{name} Tailored Resume"
+        else:
+            title = "Tailored Resume"
+
+    # Job description and application tracker setup
+    job_id = None
+    cover_letter = ""
+    outreach_message = ""
+    company = "Unknown Company"
+    role = "Manual Edit Role"
+
+    if request.job_description and request.job_description.strip():
+        # Create job
+        job_content = request.job_description.strip()
+        job_dict = await db.create_job(content=job_content, resume_id=None)
+        job_id = job_dict["job_id"]
+
+        # Check if LLM is configured
+        llm_configured = False
+        try:
+            config = get_llm_config()
+            llm_configured = bool(config.api_key) or config.provider in ("ollama", "openai_compatible")
+        except Exception:
+            pass
+
+        if llm_configured:
+            try:
+                job_keywords = await extract_job_keywords(job_content)
+                raw_company = job_keywords.get("company")
+                raw_role = job_keywords.get("role")
+                company_str = raw_company.strip() if isinstance(raw_company, str) else ""
+                role_str = raw_role.strip() if isinstance(raw_role, str) else ""
+                if company_str:
+                    company = company_str
+                if role_str:
+                    role = role_str
+
+                # Update job with keywords
+                content_hash = _hash_job_content(job_content)
+                cache_updates = {
+                    "job_keywords": job_keywords,
+                    "job_keywords_hash": content_hash,
+                }
+                if company_str:
+                    cache_updates["company"] = company_str
+                if role_str:
+                    cache_updates["role"] = role_str
+                await db.update_job(job_id, cache_updates)
+
+                # Derive resume title from job details
+                if role_str and company_str:
+                    title = f"{role_str} at {company_str}"
+                elif role_str:
+                    title = f"{role_str} Tailored Resume"
+
+                # Generate cover letter & outreach if configured
+                feature_config = _load_config()
+                enable_cover_letter = feature_config.get("enable_cover_letter", False)
+                enable_outreach = feature_config.get("enable_outreach_message", False)
+                language = get_content_language()
+
+                (
+                    cl_generated,
+                    om_generated,
+                    _,
+                    _,
+                ) = await _generate_auxiliary_messages(
+                    validated_data,
+                    job_content,
+                    language,
+                    enable_cover_letter,
+                    enable_outreach,
+                )
+                if cl_generated:
+                    cover_letter = cl_generated
+                if om_generated:
+                    outreach_message = om_generated
+            except Exception as e:
+                logger.warning("Failed to run LLM helper tasks for manual edit: %s", e)
+
+    # 3. Create the tailored resume
+    improved_text = json.dumps(validated_data, indent=2)
+    tailored_resume = await db.create_resume(
+        content=improved_text,
+        content_type="json",
+        filename=f"tailored_{master.get('filename', 'resume')}",
+        is_master=False,
+        parent_id=request.master_resume_id,
+        processed_data=validated_data,
+        processing_status="ready",
+        cover_letter=cover_letter,
+        outreach_message=outreach_message,
+        title=title,
+    )
+
+    # Associate job with the tailored resume ID
+    if job_id:
+        await db.update_job(job_id, {"resume_id": tailored_resume["resume_id"]})
+
+        # Create application tracker card
+        await db.create_application(
+            job_id=job_id,
+            resume_id=tailored_resume["resume_id"],
+            master_resume_id=request.master_resume_id,
+            status="applied",
+            company=company,
+            role=role,
+        )
+
+    return CreateFromMasterResponse(
+        resume_id=tailored_resume["resume_id"],
+        title=title,
+        processing_status="ready",
+    )
+

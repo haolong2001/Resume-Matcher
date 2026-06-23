@@ -939,6 +939,28 @@
       }
     }
   },
+  "createResume": {
+    "entry": {
+      "kicker": "Configuración de Adaptación de Currículum",
+      "title": "Elija su ruta de adaptación",
+      "description": "Optimice su currículum con asistencia de IA o cree una copia para edición manual.",
+      "aiTailor": {
+        "kicker": "Guiado por IA",
+        "title": "AI Tailor",
+        "description": "Use modelos de LLM para alinear automáticamente su currículum con una descripción de trabajo.",
+        "action": "Iniciar Adaptación por IA",
+        "disabledHint": "AI Tailor está deshabilitado porque LLM no está configurado."
+      },
+      "manualEdit": {
+        "kicker": "Autoguiado",
+        "title": "Edición Manual",
+        "description": "Cree una copia limpia de su currículum maestro para editarla directamente. Pega la descripción del trabajo abajo para hacer seguimiento.",
+        "action": "Crear Copia",
+        "creating": "Creando copia adaptada...",
+        "error": "Error al crear la copia adaptada. Por favor, inténtelo de nuevo."
+      }
+    }
+  },
   "tracker": {
     "scroll": {
       "prev": "Desplazar a la izquierda",

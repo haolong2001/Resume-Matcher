@@ -779,3 +779,19 @@ class ImproveDiffResult(BaseModel):
 
     changes: list[ResumeChange] = Field(default_factory=list)
     strategy_notes: str = Field(default="")
+
+
+class CreateFromMasterRequest(BaseModel):
+    """Request to create a tailored resume copy from master resume."""
+
+    master_resume_id: str
+    job_description: str | None = None
+
+
+class CreateFromMasterResponse(BaseModel):
+    """Response after creating resume from master resume."""
+
+    resume_id: str
+    title: str
+    processing_status: str
+

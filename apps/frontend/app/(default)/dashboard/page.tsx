@@ -3,6 +3,7 @@
 import { SwissGrid } from '@/components/home/swiss-grid';
 import { ResumeUploadDialog } from '@/components/dashboard/resume-upload-dialog';
 import { MasterResumeChoiceDialog } from '@/components/dashboard/master-resume-choice-dialog';
+import { CreateResumeChoiceDialog } from '@/components/dashboard/create-resume-choice-dialog';
 import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import {
   deleteResume,
   retryProcessing,
   fetchJobDescription,
+  createResumeFromMaster,
   type ResumeListItem,
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
@@ -40,6 +42,7 @@ export default function DashboardPage() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isMasterChoiceDialogOpen, setIsMasterChoiceDialogOpen] = useState(false);
+  const [isCreateResumeChoiceDialogOpen, setIsCreateResumeChoiceDialogOpen] = useState(false);
   const router = useRouter();
 
   // Status cache for optimistic counter updates and LLM status check
@@ -57,10 +60,13 @@ export default function DashboardPage() {
   const jobSnippetCacheRef = useRef<Record<string, string>>({});
 
   // Check if LLM is configured (API key is set)
-  const isLlmConfigured = !statusLoading && systemStatus?.llm_configured;
+  const isLlmConfigured = !statusLoading && !!systemStatus?.llm_configured;
 
-  const isTailorEnabled =
-    Boolean(masterResumeId) && processingStatus === 'ready' && isLlmConfigured;
+  const canCreateResume =
+    Boolean(masterResumeId) && processingStatus === 'ready';
+
+  const isAiTailorAvailable = canCreateResume && isLlmConfigured;
+
 
   const formatDate = (value: string) => {
     if (!value) return t('common.unknown');
@@ -195,6 +201,19 @@ export default function DashboardPage() {
   const handleChooseWizard = () => {
     setIsMasterChoiceDialogOpen(false);
     router.push('/resume-wizard');
+  };
+
+  const handleChooseAiTailor = () => {
+    setIsCreateResumeChoiceDialogOpen(false);
+    router.push('/tailor');
+  };
+
+  const handleChooseManualEdit = async (jobDescription: string) => {
+    if (!masterResumeId) return;
+    const result = await createResumeFromMaster(masterResumeId, jobDescription);
+    incrementResumes();
+    setIsCreateResumeChoiceDialogOpen(false);
+    router.push(`/builder?id=${result.resume_id}`);
   };
 
   const handleInitializeMasterKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -527,8 +546,8 @@ export default function DashboardPage() {
         <Card className="aspect-square h-full" variant="default">
           <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
             <Button
-              onClick={() => router.push('/tailor')}
-              disabled={!isTailorEnabled}
+              onClick={() => setIsCreateResumeChoiceDialogOpen(true)}
+              disabled={!canCreateResume}
               className="w-20 h-20 bg-blue-700 text-white border-2 border-black shadow-sw-default hover:bg-blue-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
             >
               <Plus className="w-8 h-8" />
@@ -567,6 +586,13 @@ export default function DashboardPage() {
           cancelLabel={t('confirmations.keepResumeCancelLabel')}
           onConfirm={confirmDeleteAndReupload}
           variant="danger"
+        />
+        <CreateResumeChoiceDialog
+          open={isCreateResumeChoiceDialogOpen}
+          onOpenChange={setIsCreateResumeChoiceDialogOpen}
+          onChooseAiTailor={handleChooseAiTailor}
+          onChooseManualEdit={handleChooseManualEdit}
+          isLlmConfigured={isLlmConfigured}
         />
       </SwissGrid>
     </div>

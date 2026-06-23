@@ -939,6 +939,28 @@
       }
     }
   },
+  "createResume": {
+    "entry": {
+      "kicker": "定制简历设置",
+      "title": "选择您的定制路径",
+      "description": "通过 AI 辅助优化您的简历，或创建副本进行手动编辑。",
+      "aiTailor": {
+        "kicker": "AI 引导",
+        "title": "AI 定制",
+        "description": "使用大语言模型（LLM）自动将您的简历与职位描述进行匹配。",
+        "action": "开始 AI 定制",
+        "disabledHint": "由于未配置 LLM，AI 定制已被禁用。"
+      },
+      "manualEdit": {
+        "kicker": "自主引导",
+        "title": "手动编辑",
+        "description": "创建主简历的副本以直接进行编辑。在下方粘贴职位描述以追踪此申请。",
+        "action": "创建副本",
+        "creating": "正在创建定制副本...",
+        "error": "创建定制副本失败。请重试。"
+      }
+    }
+  },
   "tracker": {
     "scroll": {
       "prev": "向左滚动",
