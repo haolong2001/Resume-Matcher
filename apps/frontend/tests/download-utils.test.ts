@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeFilename } from '@/lib/utils/download';
+import { sanitizeFilename, buildResumeFilename, getCompanyFromTitle } from '@/lib/utils/download';
 
 describe('sanitizeFilename', () => {
   describe('Basic functionality', () => {
@@ -402,3 +402,51 @@ describe('sanitizeFilename', () => {
     });
   });
 });
+
+describe('getCompanyFromTitle', () => {
+  it('should extract company name after @', () => {
+    expect(getCompanyFromTitle('Software Engineer @ Google')).toBe('Google');
+    expect(getCompanyFromTitle('Designer @ Meta Inc.')).toBe('Meta Inc.');
+  });
+
+  it('should return null if @ is not present or formatting is unexpected', () => {
+    expect(getCompanyFromTitle('Software Engineer')).toBeNull();
+    expect(getCompanyFromTitle('Software Engineer@Google')).toBeNull(); // expects space-@-space
+    expect(getCompanyFromTitle(null)).toBeNull();
+  });
+});
+
+describe('buildResumeFilename', () => {
+  describe('Resume type', () => {
+    it('should build name + job title when both are present', () => {
+      const result = buildResumeFilename('John Doe', null, 'test-id', 'resume', 'Software Engineer');
+      expect(result).toBe('John Doe - Software Engineer.pdf');
+    });
+
+    it('should build name + job title + company when all are present', () => {
+      const result = buildResumeFilename('John Doe', 'Google', 'test-id', 'resume', 'Software Engineer');
+      expect(result).toBe('John Doe - Software Engineer - Google.pdf');
+    });
+
+    it('should fallback to "Resume" if jobTitle is empty', () => {
+      const result1 = buildResumeFilename('John Doe', null, 'test-id', 'resume', '');
+      expect(result1).toBe('John Doe - Resume.pdf');
+
+      const result2 = buildResumeFilename('John Doe', 'Google', 'test-id', 'resume', null);
+      expect(result2).toBe('John Doe - Resume - Google.pdf');
+    });
+
+    it('should fallback to ID if name is missing', () => {
+      const result = buildResumeFilename(null, null, 'test-id', 'resume', 'Software Engineer');
+      expect(result).toBe('resume_test-id.pdf');
+    });
+  });
+
+  describe('Cover letter type', () => {
+    it('should ignore jobTitle and use Cover Letter label', () => {
+      const result = buildResumeFilename('John Doe', 'Google', 'test-id', 'cover-letter', 'Software Engineer');
+      expect(result).toBe('John Doe - Cover Letter - Google.pdf');
+    });
+  });
+});
+

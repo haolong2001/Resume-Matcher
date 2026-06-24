@@ -62,16 +62,26 @@ export function sanitizeFilename(
 }
 
 /**
+ * Extract company name from the resume title (e.g. "Software Engineer @ Google" -> "Google")
+ */
+export function getCompanyFromTitle(title: string | null | undefined): string | null {
+  if (!title) return null;
+  const atIdx = title.lastIndexOf(' @ ');
+  return atIdx !== -1 ? title.substring(atIdx + 3).trim() : null;
+}
+
+/**
  * Build a personalized download filename for resume or cover letter PDFs.
- * Format: "{Name} - {Type} - {Company}.pdf" (falls back gracefully when data is missing)
+ * Format: "{Name} - {Job Title} - {Company}.pdf" (falls back gracefully when data is missing)
  */
 export function buildResumeFilename(
   name: string | null | undefined,
   company: string | null | undefined,
   fallbackId: string,
-  type: 'resume' | 'cover-letter' = 'resume'
+  type: 'resume' | 'cover-letter' = 'resume',
+  jobTitle?: string | null
 ): string {
-  const typeLabel = type === 'resume' ? 'Resume' : 'Cover Letter';
+  const typeLabel = type === 'resume' ? (jobTitle?.trim() || 'Resume') : 'Cover Letter';
   const cleanName = name?.trim() || null;
   const cleanCompany = company?.trim() || null;
 
@@ -90,3 +100,4 @@ export function buildResumeFilename(
 
   return sanitizeFilename(raw, fallbackId, type);
 }
+

@@ -47,7 +47,7 @@ import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
-import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab } from '@/lib/utils/download';
+import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab, getCompanyFromTitle, sanitizeFilename } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
 type TabId = 'resume' | 'cover-letter' | 'outreach' | 'jd-match';
@@ -414,6 +414,9 @@ const ResumeBuilderContent = () => {
       setLastSavedData(nextData);
       setHasUnsavedChanges(false);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData));
+      if (updated.title) {
+        setResumeTitle(updated.title);
+      }
     } catch (error) {
       console.error('Failed to save resume:', error);
       showNotification(t('builder.alerts.saveFailed'), 'danger');
@@ -428,12 +431,6 @@ const ResumeBuilderContent = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lastSavedData));
   };
 
-  const getCompanyFromTitle = (title: string | null | undefined): string | null => {
-    if (!title) return null;
-    const atIdx = title.lastIndexOf(' @ ');
-    return atIdx !== -1 ? title.substring(atIdx + 3).trim() : null;
-  };
-
   const handleDownload = async () => {
     if (!resumeId) {
       showNotification(t('builder.alerts.downloadNotAvailable'), 'warning');
@@ -442,9 +439,10 @@ const ResumeBuilderContent = () => {
     try {
       setIsDownloading(true);
       const blob = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
-      const company = getCompanyFromTitle(resumeTitle);
       const userName = resumeData.personalInfo?.name?.trim() || null;
-      const filename = buildResumeFilename(userName, company, resumeId, 'resume');
+      const filename = isTailoredResume && resumeTitle
+        ? sanitizeFilename(resumeTitle, resumeId, 'resume')
+        : buildResumeFilename(userName, null, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
     } catch (error) {

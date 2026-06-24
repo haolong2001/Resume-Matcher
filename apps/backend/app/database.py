@@ -553,6 +553,14 @@ class Database:
                 raise
             return self._application_to_dict(row)
 
+    async def get_application_by_resume(self, resume_id: str) -> dict[str, Any] | None:
+        """Get an application by resume ID."""
+        async with self._session() as session:
+            stmt = select(Application).where(Application.resume_id == resume_id)
+            result = await session.execute(stmt)
+            row = result.scalars().first()
+            return self._application_to_dict(row) if row else None
+
     async def list_applications(self, status: str | None = None) -> list[dict[str, Any]]:
         """List applications ordered by (status, position)."""
         async with self._session() as session:

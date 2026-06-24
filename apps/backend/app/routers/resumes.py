@@ -1353,6 +1353,14 @@ async def improve_resume_endpoint(
         response_warnings.extend(aux_warnings)
 
         # Store the tailored resume with cover letter, outreach message, and title
+        personal_info = improved_data.get("personalInfo", {})
+        name = personal_info.get("name", "").strip() if isinstance(personal_info, dict) else ""
+        final_title = title
+        if name and title:
+            final_title = f"{name} - {title}"
+        elif name:
+            final_title = f"{name} - Tailored Resume"
+
         tailored_resume = await db.create_resume(
             content=improved_text,
             content_type="json",
@@ -1363,7 +1371,7 @@ async def improve_resume_endpoint(
             processing_status="ready",
             cover_letter=cover_letter,
             outreach_message=outreach_message,
-            title=title,
+            title=final_title,
         )
 
         # Store improvement record
@@ -1431,14 +1439,26 @@ async def update_resume_endpoint(
     updated_data = resume_data.model_dump()
     updated_content = json.dumps(updated_data, indent=2)
 
+    personal_info = updated_data.get("personalInfo", {})
+    name = personal_info.get("name", "").strip() if isinstance(personal_info, dict) else ""
+    
+    db_updates = {
+        "content": updated_content,
+        "content_type": "json",
+        "processed_data": updated_data,
+        "processing_status": "ready",
+    }
+    
+    if not existing.get("is_master") and name:
+        application = await db.get_application_by_resume(resume_id)
+        if application and application.get("role"):
+            job_title = application["role"].strip()
+            if job_title:
+                db_updates["title"] = f"{name} - {job_title}"
+
     updated = await db.update_resume(
         resume_id,
-        {
-            "content": updated_content,
-            "content_type": "json",
-            "processed_data": updated_data,
-            "processing_status": "ready",
-        },
+        db_updates,
     )
 
     if not updated:
@@ -1464,6 +1484,10 @@ async def update_resume_endpoint(
             resume_id=resume_id,
             raw_resume=raw_resume,
             processed_resume=processed_resume,
+            cover_letter=updated.get("cover_letter"),
+            outreach_message=updated.get("outreach_message"),
+            parent_id=updated.get("parent_id"),
+            title=updated.get("title"),
         ),
     )
 
@@ -1918,6 +1942,9 @@ async def create_from_master(
         )
 
     # Determine default title
+    personal_info = validated_data.get("personalInfo", {})
+    name = personal_info.get("name", "").strip() if isinstance(personal_info, dict) else ""
+
     master_title = master.get("title")
     if master_title:
         if "Master" in master_title:
@@ -1925,8 +1952,6 @@ async def create_from_master(
         else:
             title = f"{master_title} Tailored"
     else:
-        personal_info = validated_data.get("personalInfo", {})
-        name = personal_info.get("name", "") if isinstance(personal_info, dict) else ""
         if name:
             title = f"{name} Tailored Resume"
         else:
@@ -1978,10 +2003,11 @@ async def create_from_master(
                 await db.update_job(job_id, cache_updates)
 
                 # Derive resume title from job details
-                if role_str and company_str:
-                    title = f"{role_str} at {company_str}"
-                elif role_str:
-                    title = f"{role_str} Tailored Resume"
+                if role_str:
+                    if name:
+                        title = f"{name} - {role_str}"
+                    else:
+                        title = f"{role_str} Tailored Resume"
 
                 # Generate cover letter & outreach if configured
                 feature_config = _load_config()
