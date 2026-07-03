@@ -404,6 +404,7 @@ class ResumeFetchData(BaseModel):
     """Data payload for resume fetch response."""
 
     resume_id: str
+    is_master: bool = False
     raw_resume: RawResume
     processed_resume: ResumeData | None = None
     cover_letter: str | None = None
@@ -802,15 +803,22 @@ class ImproveDiffResult(BaseModel):
 
 
 class CreateFromMasterRequest(BaseModel):
-    """Request to create a tailored resume copy from master resume."""
+    """Request to create a tailored resume copy from an existing resume."""
 
-    master_resume_id: str
+    source_resume_id: str
     job_description: str | None = None
 
 
 class CreateFromMasterResponse(BaseModel):
-    """Response after creating resume from master resume."""
+    """Response after creating resume from an existing resume."""
 
     resume_id: str
     title: str
     processing_status: str
+
+
+class SetMasterResumeResponse(BaseModel):
+    """Response after promoting a resume to master."""
+
+    resume_id: str
+    is_master: bool = True

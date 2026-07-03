@@ -2,14 +2,24 @@ export function downloadBlobAsFile(blob: Blob, filename: string): void {
   if (typeof document === 'undefined') return;
   if (!document.body) return;
   const url = URL.createObjectURL(blob);
+  downloadUrlAsFile(url, filename);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+export function downloadUrlAsFile(url: string, filename?: string): void {
+  if (typeof document === 'undefined') return;
+  if (!document.body) return;
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  if (filename) {
+    link.download = filename;
+  }
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   setTimeout(() => {
-    URL.revokeObjectURL(url);
     link.remove();
   }, 1000);
 }
@@ -81,7 +91,7 @@ export function buildResumeFilename(
   type: 'resume' | 'cover-letter' = 'resume',
   jobTitle?: string | null
 ): string {
-  const typeLabel = type === 'resume' ? (jobTitle?.trim() || 'Resume') : 'Cover Letter';
+  const typeLabel = type === 'resume' ? jobTitle?.trim() || 'Resume' : 'Cover Letter';
   const cleanName = name?.trim() || null;
   const cleanCompany = company?.trim() || null;
 
@@ -100,4 +110,3 @@ export function buildResumeFilename(
 
   return sanitizeFilename(raw, fallbackId, type);
 }
-

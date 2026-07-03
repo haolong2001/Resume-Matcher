@@ -13,7 +13,7 @@ Dashboard → Upload Master Resume → Tailor for Job → View/Edit → Download
 ### 1. Dashboard (`/dashboard`)
 - **No master:** "Initialize Master Resume" card
 - **Has master:** "Master Resume" card + tailored tiles
-- **Create:** "+" card opens a choice dialog (AI Tailor vs Manual Edit). AI Tailor redirects to `/tailor`. Manual Edit prompts for an optional job description, clones the master resume, creates application tracker cards, and redirects to `/builder?id=...`.
+- **Create:** "+" card opens a choice dialog (AI Tailor vs Manual Edit). AI Tailor still depends on a ready master and redirects to `/tailor`. Manual Edit prompts for an optional job description, lets the user choose **any ready source resume** to clone, creates application tracker cards, and redirects to `/builder?id=...`.
 - Auto-refreshes on window focus
 
 ### 2. Resume Viewer (`/resumes/[id]`)

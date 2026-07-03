@@ -26,7 +26,7 @@ import {
   deleteResume,
   retryProcessing,
   fetchJobDescription,
-  createResumeFromMaster,
+  createResumeCopy,
   type ResumeListItem,
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('loading');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tailoredResumes, setTailoredResumes] = useState<ResumeListItem[]>([]);
+  const [allResumes, setAllResumes] = useState<ResumeListItem[]>([]);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isMasterChoiceDialogOpen, setIsMasterChoiceDialogOpen] = useState(false);
@@ -62,11 +63,11 @@ export default function DashboardPage() {
   // Check if LLM is configured (API key is set)
   const isLlmConfigured = !statusLoading && !!systemStatus?.llm_configured;
 
-  const canCreateResume =
-    Boolean(masterResumeId) && processingStatus === 'ready';
+  const readyResumes = allResumes.filter((resume) => resume.processing_status === 'ready');
+  const canCreateResume = readyResumes.length > 0;
 
-  const isAiTailorAvailable = canCreateResume && isLlmConfigured;
-
+  const isAiTailorAvailable =
+    Boolean(masterResumeId) && processingStatus === 'ready' && isLlmConfigured;
 
   const formatDate = (value: string) => {
     if (!value) return t('common.unknown');
@@ -125,6 +126,7 @@ export default function DashboardPage() {
         setMasterResumeId(null);
       }
 
+      setAllResumes(data);
       const filtered = data.filter((r) => r.resume_id !== resolvedMasterId);
       setTailoredResumes(filtered);
 
@@ -208,9 +210,8 @@ export default function DashboardPage() {
     router.push('/tailor');
   };
 
-  const handleChooseManualEdit = async (jobDescription: string) => {
-    if (!masterResumeId) return;
-    const result = await createResumeFromMaster(masterResumeId, jobDescription);
+  const handleChooseManualEdit = async (sourceResumeId: string, jobDescription: string) => {
+    const result = await createResumeCopy(sourceResumeId, jobDescription);
     incrementResumes();
     setIsCreateResumeChoiceDialogOpen(false);
     router.push(`/builder?id=${result.resume_id}`);
@@ -593,6 +594,9 @@ export default function DashboardPage() {
           onChooseAiTailor={handleChooseAiTailor}
           onChooseManualEdit={handleChooseManualEdit}
           isLlmConfigured={isLlmConfigured}
+          sourceResumes={readyResumes}
+          defaultSourceResumeId={masterResumeId}
+          canAiTailor={isAiTailorAvailable}
         />
       </SwissGrid>
     </div>

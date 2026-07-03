@@ -40,6 +40,7 @@ from app.schemas import (
     ResumeSummary,
     ResumeUploadResponse,
     RawResume,
+    SetMasterResumeResponse,
     UpdateCoverLetterRequest,
     UpdateOutreachMessageRequest,
     UpdateTitleRequest,
@@ -121,6 +122,20 @@ def _normalize_payload(value: Any) -> Any:
             normalized[normalized_key] = _normalize_payload(val)
         return normalized
     return value
+
+
+def _sanitize_download_filename(filename: str | None, fallback: str) -> str:
+    """Return a safe PDF filename for Content-Disposition."""
+    if not filename:
+        return fallback
+
+    sanitized = filename.strip().replace("\r", "").replace("\n", "")
+    sanitized = sanitized.replace('"', "")
+    if not sanitized:
+        return fallback
+    if not sanitized.lower().endswith(".pdf"):
+        sanitized = f"{sanitized}.pdf"
+    return sanitized
 
 
 def _hash_improved_data(data: dict[str, Any]) -> str:
@@ -679,6 +694,7 @@ async def get_resume(resume_id: str = Query(...)) -> ResumeFetchResponse:
         request_id=str(uuid4()),
         data=ResumeFetchData(
             resume_id=resume_id,
+            is_master=resume.get("is_master", False),
             raw_resume=raw_resume,
             processed_resume=processed_resume,
             cover_letter=resume.get("cover_letter"),
@@ -1482,6 +1498,7 @@ async def update_resume_endpoint(
         request_id=str(uuid4()),
         data=ResumeFetchData(
             resume_id=resume_id,
+            is_master=updated.get("is_master", False),
             raw_resume=raw_resume,
             processed_resume=processed_resume,
             cover_letter=updated.get("cover_letter"),
@@ -1511,6 +1528,7 @@ async def download_resume_pdf(
     compactMode: bool = Query(False),
     showContactIcons: bool = Query(False),
     accentColor: str = Query("blue", pattern="^(blue|green|orange|red)$"),
+    filename: str | None = Query(None),
     lang: str | None = Query(None, pattern="^[a-z]{2}(-[A-Z]{2})?$"),
 ) -> Response:
     """Generate a PDF for a resume using headless Chromium.
@@ -1571,7 +1589,8 @@ async def download_resume_pdf(
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
+    download_name = _sanitize_download_filename(filename, f"resume_{resume_id}.pdf")
+    headers = {"Content-Disposition": f'attachment; filename="{download_name}"'}
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
@@ -1582,6 +1601,23 @@ async def delete_resume(resume_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Resume not found")
 
     return {"message": "Resume deleted successfully"}
+
+
+@router.post("/{resume_id}/set-master", response_model=SetMasterResumeResponse)
+async def set_master_resume(resume_id: str) -> SetMasterResumeResponse:
+    """Promote any existing resume to be the sole master resume."""
+    resume = await db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    if resume.get("processing_status") != "ready":
+        raise HTTPException(status_code=400, detail="Only ready resumes can be set as master")
+
+    updated = await db.set_master_resume(resume_id)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to set master resume")
+
+    return SetMasterResumeResponse(resume_id=resume_id, is_master=True)
 
 
 @router.post("/{resume_id}/retry-processing", response_model=ResumeUploadResponse)
@@ -1864,6 +1900,7 @@ async def get_job_description_for_resume(resume_id: str) -> dict:
 async def download_cover_letter_pdf(
     resume_id: str,
     pageSize: str = Query("A4", pattern="^(A4|LETTER)$"),
+    filename: str | None = Query(None),
     lang: str | None = Query(None, pattern="^[a-z]{2}(-[A-Z]{2})?$"),
 ) -> Response:
     """Generate a PDF for a cover letter using headless Chromium.
@@ -1896,9 +1933,10 @@ async def download_cover_letter_pdf(
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    headers = {
-        "Content-Disposition": f'attachment; filename="cover_letter_{resume_id}.pdf"'
-    }
+    download_name = _sanitize_download_filename(
+        filename, f"cover_letter_{resume_id}.pdf"
+    )
+    headers = {"Content-Disposition": f'attachment; filename="{download_name}"'}
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
@@ -1906,21 +1944,18 @@ async def download_cover_letter_pdf(
 async def create_from_master(
     request: CreateFromMasterRequest,
 ) -> CreateFromMasterResponse:
-    """Create a tailored resume copy from the master resume, bypassing AI tailoring."""
-    # 1. Fetch master resume, verify it exists, is master, and is ready
-    master = await db.get_resume(request.master_resume_id)
-    if not master:
-        raise HTTPException(status_code=404, detail="Master resume not found")
-    if not master.get("is_master"):
-        raise HTTPException(status_code=400, detail="Specified resume is not a master resume")
-    if master.get("processing_status") != "ready":
-        raise HTTPException(status_code=400, detail="Master resume is not in ready status")
+    """Create a tailored resume copy from an existing resume, bypassing AI tailoring."""
+    source_resume = await db.get_resume(request.source_resume_id)
+    if not source_resume:
+        raise HTTPException(status_code=404, detail="Source resume not found")
+    if source_resume.get("processing_status") != "ready":
+        raise HTTPException(status_code=400, detail="Source resume is not in ready status")
 
     # 2. Extract and validate processed_data
-    processed_data = master.get("processed_data")
-    if not processed_data and master.get("content_type") == "json":
+    processed_data = source_resume.get("processed_data")
+    if not processed_data and source_resume.get("content_type") == "json":
         try:
-            processed_data = json.loads(master["content"])
+            processed_data = json.loads(source_resume["content"])
         except Exception:
             pass
     if not processed_data:
@@ -1945,12 +1980,12 @@ async def create_from_master(
     personal_info = validated_data.get("personalInfo", {})
     name = personal_info.get("name", "").strip() if isinstance(personal_info, dict) else ""
 
-    master_title = master.get("title")
-    if master_title:
-        if "Master" in master_title:
-            title = master_title.replace("Master", "Tailored")
+    source_title = source_resume.get("title")
+    if source_title:
+        if "Master" in source_title:
+            title = source_title.replace("Master", "Tailored")
         else:
-            title = f"{master_title} Tailored"
+            title = f"{source_title} Tailored"
     else:
         if name:
             title = f"{name} Tailored Resume"
@@ -2039,9 +2074,9 @@ async def create_from_master(
     tailored_resume = await db.create_resume(
         content=improved_text,
         content_type="json",
-        filename=f"tailored_{master.get('filename', 'resume')}",
+        filename=f"tailored_{source_resume.get('filename', 'resume')}",
         is_master=False,
-        parent_id=request.master_resume_id,
+        parent_id=request.source_resume_id,
         processed_data=validated_data,
         processing_status="ready",
         cover_letter=cover_letter,
@@ -2057,7 +2092,7 @@ async def create_from_master(
         await db.create_application(
             job_id=job_id,
             resume_id=tailored_resume["resume_id"],
-            master_resume_id=request.master_resume_id,
+            master_resume_id=request.source_resume_id,
             status="applied",
             company=company,
             role=role,
@@ -2068,4 +2103,3 @@ async def create_from_master(
         title=title,
         processing_status="ready",
     )
-

@@ -14,13 +14,17 @@ import { useTranslations } from '@/lib/i18n';
 import Bot from 'lucide-react/dist/esm/icons/bot';
 import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import type { ResumeListItem } from '@/lib/api/resume';
 
 interface CreateResumeChoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChooseAiTailor: () => void;
-  onChooseManualEdit: (jobDescription: string) => Promise<void>;
+  onChooseManualEdit: (sourceResumeId: string, jobDescription: string) => Promise<void>;
   isLlmConfigured: boolean;
+  sourceResumes: ResumeListItem[];
+  defaultSourceResumeId: string | null;
+  canAiTailor: boolean;
 }
 
 type Step = 'choose' | 'manual-setup';
@@ -31,10 +35,14 @@ export function CreateResumeChoiceDialog({
   onChooseAiTailor,
   onChooseManualEdit,
   isLlmConfigured,
+  sourceResumes,
+  defaultSourceResumeId,
+  canAiTailor,
 }: CreateResumeChoiceDialogProps) {
   const { t } = useTranslations();
   const [step, setStep] = useState<Step>('choose');
   const [jobDescription, setJobDescription] = useState('');
+  const [sourceResumeId, setSourceResumeId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,16 +51,21 @@ export function CreateResumeChoiceDialog({
     if (open) {
       setStep('choose');
       setJobDescription('');
+      setSourceResumeId(defaultSourceResumeId || sourceResumes[0]?.resume_id || '');
       setError(null);
       setIsCreating(false);
     }
-  }, [open]);
+  }, [defaultSourceResumeId, open, sourceResumes]);
 
   const handleCreate = async () => {
+    if (!sourceResumeId) {
+      setError('Select a source resume first.');
+      return;
+    }
     setIsCreating(true);
     setError(null);
     try {
-      await onChooseManualEdit(jobDescription);
+      await onChooseManualEdit(sourceResumeId, jobDescription);
     } catch (err: unknown) {
       console.error(err);
       setError(t('createResume.entry.manualEdit.error') || 'Failed to create copy');
@@ -100,13 +113,16 @@ export function CreateResumeChoiceDialog({
                   <Button
                     className="w-full"
                     onClick={onChooseAiTailor}
-                    disabled={!isLlmConfigured}
+                    disabled={!isLlmConfigured || !canAiTailor}
                   >
                     {t('createResume.entry.aiTailor.action')}
                   </Button>
-                  {!isLlmConfigured && (
+                  {(!isLlmConfigured || !canAiTailor) && (
                     <p className="font-mono text-[10px] text-red-600 uppercase mt-1">
-                      * {t('createResume.entry.aiTailor.disabledHint')}
+                      *{' '}
+                      {!isLlmConfigured
+                        ? t('createResume.entry.aiTailor.disabledHint')
+                        : 'A ready master resume is required for AI tailoring.'}
                     </p>
                   )}
                 </div>
@@ -150,6 +166,32 @@ export function CreateResumeChoiceDialog({
             </DialogHeader>
 
             <div className="bg-background p-6 space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="source-resume"
+                  className="font-mono text-xs font-bold uppercase tracking-wider text-steel-grey"
+                >
+                  Source Resume
+                </label>
+                <select
+                  id="source-resume"
+                  value={sourceResumeId}
+                  onChange={(e) => setSourceResumeId(e.target.value)}
+                  disabled={isCreating}
+                  className="w-full border-2 border-black bg-white px-3 py-2 font-mono text-sm rounded-none"
+                >
+                  {sourceResumes.map((resume) => {
+                    const label = resume.title || resume.filename || resume.resume_id;
+                    const suffix = resume.is_master ? ' (Master)' : '';
+                    return (
+                      <option key={resume.resume_id} value={resume.resume_id}>
+                        {label}
+                        {suffix}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
               <div className="relative">
                 <Textarea
                   placeholder={t('tailor.jobDescriptionPlaceholder')}
@@ -166,11 +208,7 @@ export function CreateResumeChoiceDialog({
                 </div>
               )}
               <div className="flex justify-between gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('choose')}
-                  disabled={isCreating}
-                >
+                <Button variant="outline" onClick={() => setStep('choose')} disabled={isCreating}>
                   {t('common.back')}
                 </Button>
                 <Button onClick={handleCreate} disabled={isCreating}>

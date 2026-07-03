@@ -54,6 +54,7 @@ interface ResumeResponse {
   request_id: string;
   data: {
     resume_id: string;
+    is_master: boolean;
     raw_resume: {
       id: number | null;
       content: string;
@@ -107,6 +108,11 @@ export interface ResumeListItem {
   title?: string | null;
   // Optional lightweight snippet of associated job description (populated client-side)
   jobSnippet?: string;
+}
+
+export interface SetMasterResumeResponse {
+  resume_id: string;
+  is_master: boolean;
 }
 
 async function postImprove(
@@ -221,7 +227,8 @@ export async function updateResume(
 export function getResumePdfUrl(
   resumeId: string,
   settings?: TemplateSettings,
-  locale?: Locale
+  locale?: Locale,
+  filename?: string
 ): string {
   const normalizedId = normalizeResumeId(resumeId);
   const params = new URLSearchParams();
@@ -249,6 +256,9 @@ export function getResumePdfUrl(
   }
   if (locale) {
     params.set('lang', locale);
+  }
+  if (filename?.trim()) {
+    params.set('filename', filename.trim());
   }
 
   return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/pdf?${params.toString()}`;
@@ -310,12 +320,16 @@ export async function renameResume(resumeId: string, title: string): Promise<voi
 export function getCoverLetterPdfUrl(
   resumeId: string,
   pageSize: 'A4' | 'LETTER' = 'A4',
-  locale?: Locale
+  locale?: Locale,
+  filename?: string
 ): string {
   const normalizedId = normalizeResumeId(resumeId);
   const params = new URLSearchParams({ pageSize });
   if (locale) {
     params.set('lang', locale);
+  }
+  if (filename?.trim()) {
+    params.set('filename', filename.trim());
   }
   return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/cover-letter/pdf?${params.toString()}`;
 }
@@ -378,18 +392,27 @@ export async function fetchJobDescription(
   return res.json();
 }
 
-/** Creates a tailored resume copy from the master resume, bypassing AI tailoring */
-export async function createResumeFromMaster(
-  masterResumeId: string,
+/** Creates a tailored resume copy from an existing resume, bypassing AI tailoring */
+export async function createResumeCopy(
+  sourceResumeId: string,
   jobDescription?: string
 ): Promise<{ resume_id: string }> {
   const res = await apiPost('/resumes/create-from-master', {
-    master_resume_id: masterResumeId,
+    source_resume_id: sourceResumeId,
     job_description: jobDescription || null,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Failed to create resume from master (status ${res.status}): ${text}`);
+    throw new Error(`Failed to create resume copy (status ${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+export async function setMasterResume(resumeId: string): Promise<SetMasterResumeResponse> {
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/set-master`, {});
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to set master resume (status ${res.status}): ${text}`);
   }
   return res.json();
 }

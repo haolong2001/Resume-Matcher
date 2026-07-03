@@ -28,8 +28,6 @@ import {
 import { useResumePreview } from '@/components/common/resume_previewer_context';
 import { PaginatedPreview } from '@/components/preview';
 import {
-  downloadResumePdf,
-  downloadCoverLetterPdf,
   getResumePdfUrl,
   getCoverLetterPdfUrl,
   fetchResume,
@@ -49,7 +47,7 @@ import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
 import {
   buildResumeFilename,
-  downloadBlobAsFile,
+  downloadUrlAsFile,
   openUrlInNewTab,
   getCompanyFromTitle,
   sanitizeFilename,
@@ -460,13 +458,13 @@ const ResumeBuilderContent = () => {
       }
 
       setIsDownloading(true);
-      const blob = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
       const userName = downloadData.personalInfo?.name?.trim() || null;
       const filename =
         isTailoredResume && resumeTitle
           ? sanitizeFilename(resumeTitle, resumeId, 'resume')
           : buildResumeFilename(userName, null, resumeId, 'resume');
-      downloadBlobAsFile(blob, filename);
+      const downloadUrl = getResumePdfUrl(resumeId, templateSettings, uiLanguage, filename);
+      downloadUrlAsFile(downloadUrl, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
     } catch (error) {
       console.error('Failed to download resume:', error);
@@ -514,11 +512,16 @@ const ResumeBuilderContent = () => {
     }
     try {
       setIsDownloading(true);
-      const blob = await downloadCoverLetterPdf(resumeId, templateSettings.pageSize, uiLanguage);
       const company = getCompanyFromTitle(resumeTitle);
       const userName = resumeData.personalInfo?.name?.trim() || null;
       const filename = buildResumeFilename(userName, company, resumeId, 'cover-letter');
-      downloadBlobAsFile(blob, filename);
+      const downloadUrl = getCoverLetterPdfUrl(
+        resumeId,
+        templateSettings.pageSize,
+        uiLanguage,
+        filename
+      );
+      downloadUrlAsFile(downloadUrl, filename);
     } catch (error) {
       console.error('Failed to download cover letter:', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {

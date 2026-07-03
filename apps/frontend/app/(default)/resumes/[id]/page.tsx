@@ -7,11 +7,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Resume, { ResumeData } from '@/components/dashboard/resume-component';
 import {
   fetchResume,
-  downloadResumePdf,
   getResumePdfUrl,
   deleteResume,
   retryProcessing,
   renameResume,
+  setMasterResume,
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
 import { ArrowLeft, Edit, Download, Loader2, AlertCircle, Sparkles, Pencil } from 'lucide-react';
@@ -19,7 +19,12 @@ import { EnrichmentModal } from '@/components/enrichment/enrichment-modal';
 import { useTranslations } from '@/lib/i18n';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
-import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename, buildResumeFilename, getCompanyFromTitle } from '@/lib/utils/download';
+import {
+  downloadUrlAsFile,
+  openUrlInNewTab,
+  sanitizeFilename,
+  buildResumeFilename,
+} from '@/lib/utils/download';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
@@ -41,6 +46,7 @@ export default function ResumeViewerPage() {
   const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPromotingToMaster, setIsPromotingToMaster] = useState(false);
   const [resumeTitle, setResumeTitle] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitleValue, setEditingTitleValue] = useState('');
@@ -60,6 +66,8 @@ export default function ResumeViewerPage() {
         setLoading(true);
         setError(null);
         const data = await fetchResume(resumeId);
+
+        setIsMasterResume(data.is_master);
 
         // Get processing status
         const status = (data.raw_resume?.processing_status || 'pending') as ProcessingStatus;
@@ -94,9 +102,7 @@ export default function ResumeViewerPage() {
         setLoading(false);
       }
     };
-
     loadResume();
-    setIsMasterResume(localStorage.getItem('master_resume_id') === resumeId);
   }, [resumeId, t]);
 
   const handleRetryProcessing = async () => {
@@ -120,6 +126,20 @@ export default function ResumeViewerPage() {
 
   const handleEdit = () => {
     router.push(`/builder?id=${resumeId}`);
+  };
+
+  const handleSetMasterResume = async () => {
+    try {
+      setIsPromotingToMaster(true);
+      await setMasterResume(resumeId);
+      localStorage.setItem('master_resume_id', resumeId);
+      setHasMasterResume(true);
+      setIsMasterResume(true);
+    } catch (err) {
+      console.error('Failed to set master resume:', err);
+    } finally {
+      setIsPromotingToMaster(false);
+    }
   };
 
   const handleTitleSave = async () => {
@@ -166,12 +186,13 @@ export default function ResumeViewerPage() {
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await downloadResumePdf(resumeId, undefined, uiLanguage);
       const userName = resumeData?.personalInfo?.name?.trim() || null;
-      const filename = !isMasterResume && resumeTitle
-        ? sanitizeFilename(resumeTitle, resumeId, 'resume')
-        : buildResumeFilename(userName, null, resumeId, 'resume');
-      downloadBlobAsFile(blob, filename);
+      const filename =
+        !isMasterResume && resumeTitle
+          ? sanitizeFilename(resumeTitle, resumeId, 'resume')
+          : buildResumeFilename(userName, null, resumeId, 'resume');
+      const downloadUrl = getResumePdfUrl(resumeId, undefined, uiLanguage, filename);
+      downloadUrlAsFile(downloadUrl, filename);
       setShowDownloadSuccessDialog(true);
     } catch (err) {
       console.error('Failed to download resume:', err);
@@ -300,6 +321,22 @@ export default function ResumeViewerPage() {
               <Button onClick={() => setShowEnrichmentModal(true)} className="gap-2">
                 <Sparkles className="w-4 h-4" />
                 {t('resumeViewer.enhanceResume')}
+              </Button>
+            )}
+            {!isMasterResume && (
+              <Button
+                variant="outline"
+                onClick={handleSetMasterResume}
+                disabled={isPromotingToMaster || processingStatus !== 'ready'}
+              >
+                {isPromotingToMaster ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Setting Master
+                  </>
+                ) : (
+                  'Set as Master'
+                )}
               </Button>
             )}
             <Button variant="outline" onClick={handleEdit}>

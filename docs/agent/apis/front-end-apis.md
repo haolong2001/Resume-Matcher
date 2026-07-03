@@ -39,8 +39,9 @@ downloadCoverLetterPdf(resumeId: string, pageSize?: string) → Blob
 updateCoverLetter(resumeId: string, content: string) → void
 updateOutreachMessage(resumeId: string, content: string) → void
 
-// Manual Edit Creation
-createResumeFromMaster(masterResumeId: string, jobDescription?: string) → { resume_id: string }
+// Manual Edit Creation / Master Promotion
+createResumeCopy(sourceResumeId: string, jobDescription?: string) → { resume_id: string }
+setMasterResume(resumeId: string) → { resume_id: string; is_master: true }
 ```
 
 ## Resume Wizard (`lib/api/resume-wizard.ts`)
@@ -53,7 +54,8 @@ createInitialResumeWizardState() → ResumeWizardState
 
 Backend endpoints:
 
-- `POST /api/v1/resumes/create-from-master` — creates a tailored copy of the master resume directly without LLM-based content tailoring. Accepts `master_resume_id` and an optional `job_description`. If `job_description` is provided, creates a `Job` record and a Kanban tracker card. Initializes `cover_letter` and `outreach_message` to `""` (empty string) to unlock manual editing in the frontend builder.
+- `POST /api/v1/resumes/create-from-master` — despite the legacy route name, this now creates a tailored copy from **any ready source resume** without LLM-based content tailoring. Accepts `source_resume_id` and an optional `job_description`. If `job_description` is provided, creates a `Job` record and a Kanban tracker card. Initializes `cover_letter` and `outreach_message` to `""` (empty string) to unlock manual editing in the frontend builder.
+- `POST /api/v1/resumes/{resume_id}/set-master` — promotes any **ready** resume to be the sole master resume and demotes the previous master in the same transaction.
 - `POST /api/v1/resume-wizard/turn` — one adaptive turn. `action` is `start | answer | skip | back | review`. `answer`/`skip` run one AI call that updates `resume_data`, returns the next `current_question`, `inferred_skills`, and an `is_complete` flag; `back`/`review`/`start` are deterministic (no LLM). The full `ResumeWizardState` round-trips in the request and response.
 - `POST /api/v1/resume-wizard/finalize` — creates the single master resume from the draft (`processing_status: "ready"`), or `409` if a master already exists.
 
