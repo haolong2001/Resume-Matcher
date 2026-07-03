@@ -246,9 +246,7 @@ export const ResumeLatex: React.FC<ResumeLatexProps> = ({
               {education.map((edu) => (
                 <div key={edu.id} className={baseStyles['resume-item']}>
                   {renderEntryHeader(edu.institution, edu.years, edu.degree)}
-                  {edu.description && (
-                    <p className={baseStyles['resume-text-sm']}>{edu.description}</p>
-                  )}
+                  {renderBullets(edu.description, baseStyles['resume-text-sm'])}
                 </div>
               ))}
             </div>
@@ -350,8 +348,13 @@ const AdditionalSection: React.FC<{
 
   const line = (label: string, items: string[]) =>
     items.length > 0 ? (
-      <div>
-        <span className="font-bold">{label}</span> {items.join(', ')}
+      <div className="flex items-start gap-2">
+        <span className="font-bold shrink-0">{label}</span>
+        <div className="flex-1">
+          {items.map((item, index) => (
+            <div key={`${label}-${index}`}>{item}</div>
+          ))}
+        </div>
       </div>
     ) : null;
 

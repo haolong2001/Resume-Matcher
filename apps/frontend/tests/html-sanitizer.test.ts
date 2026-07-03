@@ -8,10 +8,11 @@ import { sanitizeHtml } from '@/lib/utils/html-sanitizer';
 
 describe('sanitizeHtml', () => {
   it('keeps whitelisted formatting tags', () => {
-    const out = sanitizeHtml('<strong>bold</strong> <em>italic</em> <u>under</u>');
+    const out = sanitizeHtml('<strong>bold</strong> <em>italic</em> <u>under</u> <br>');
     expect(out).toContain('<strong>bold</strong>');
     expect(out).toContain('<em>italic</em>');
     expect(out).toContain('<u>under</u>');
+    expect(out).toContain('<br');
   });
 
   it('keeps anchor href', () => {

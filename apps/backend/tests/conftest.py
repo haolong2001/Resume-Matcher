@@ -56,7 +56,10 @@ def sample_resume() -> dict:
                 "institution": "MIT",
                 "degree": "B.S. Computer Science",
                 "years": "2014 - 2018",
-                "description": "Graduated with honors, Dean's List",
+                "description": [
+                    "Graduated with honors",
+                    "Dean's List",
+                ],
             }
         ],
         "personalProjects": [

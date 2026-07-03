@@ -250,9 +250,7 @@ export const ResumeClean: React.FC<ResumeCleanProps> = ({
               {education.map((edu) => (
                 <div key={edu.id} className={baseStyles['resume-item']}>
                   {renderEntryHeader(edu.institution, edu.degree, undefined, edu.years)}
-                  {edu.description && (
-                    <p className={baseStyles['resume-text-sm']}>{edu.description}</p>
-                  )}
+                  {renderBullets(edu.description, baseStyles['resume-text-sm'])}
                 </div>
               ))}
             </div>
@@ -352,8 +350,13 @@ const AdditionalSection: React.FC<{
 
   const line = (label: string, items: string[]) =>
     items.length > 0 ? (
-      <div>
-        <span className={styles.skillLabel}>{label}</span> {items.join(', ')}
+      <div className="flex items-start gap-2">
+        <span className={`${styles.skillLabel} shrink-0`}>{label}</span>
+        <div className="flex-1">
+          {items.map((item, index) => (
+            <div key={`${label}-${index}`}>{item}</div>
+          ))}
+        </div>
       </div>
     ) : null;
 

@@ -185,6 +185,24 @@ export const ResumeVivid: React.FC<ResumeVividProps> = ({
             </div>
           )}
 
+          {isSectionVisible('education') && education && education.length > 0 && (
+            <div className={baseStyles['resume-section']}>
+              <h3 className={styles.sectionTitle}>
+                {getSectionDisplayName('education', headingFallbacks.education)}
+              </h3>
+              <div className={baseStyles['resume-stack']}>
+                {education.map((edu) => (
+                  <div key={edu.id}>
+                    <h4 className={styles.entryCompany}>{edu.institution}</h4>
+                    <p className={baseStyles['resume-item-subtitle-sm']}>{edu.degree}</p>
+                    {edu.years && <p className={styles.entryMeta}>{formatDateRange(edu.years)}</p>}
+                    {renderArrowBullets(edu.description)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isSectionVisible('workExperience') && workExperience && workExperience.length > 0 && (
             <div className={baseStyles['resume-section']}>
               <h3 className={styles.sectionTitle}>
@@ -321,36 +339,6 @@ export const ResumeVivid: React.FC<ResumeVividProps> = ({
             <div className={baseStyles['resume-section']}>
               <h3 className={styles.sectionTitleSm}>{headingFallbacks.languages}</h3>
               <p className={baseStyles['resume-text-xs']}>{languages.join(' • ')}</p>
-            </div>
-          )}
-
-          {isSectionVisible('education') && education && education.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3 className={styles.sectionTitleSm}>
-                {getSectionDisplayName('education', headingFallbacks.education)}
-              </h3>
-              <div className={baseStyles['resume-stack']}>
-                {education.map((edu) => (
-                  <div key={edu.id}>
-                    <h4
-                      className={`${baseStyles['resume-item-title-sm']} ${baseStyles['sidebar-text-wrap']}`}
-                    >
-                      {edu.institution}
-                    </h4>
-                    <p className={baseStyles['resume-item-subtitle-sm']}>{edu.degree}</p>
-                    {edu.years && (
-                      <p className={`${baseStyles['resume-meta-sm']}`}>
-                        {formatDateRange(edu.years)}
-                      </p>
-                    )}
-                    {edu.description && (
-                      <p className={`${baseStyles['resume-text-xs']} ${baseStyles['resume-meta']}`}>
-                        {edu.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 

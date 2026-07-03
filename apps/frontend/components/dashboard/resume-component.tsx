@@ -34,6 +34,7 @@ export interface Experience {
   location?: string;
   years?: string;
   description?: string[];
+  descriptionBullets?: boolean[];
 }
 
 export interface Education {
@@ -41,7 +42,7 @@ export interface Education {
   institution?: string;
   degree?: string;
   years?: string;
-  description?: string;
+  description?: string[];
 }
 
 export interface Project {

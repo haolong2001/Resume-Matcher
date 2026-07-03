@@ -18,7 +18,7 @@ const RichTextEditor = dynamic(
   }
 );
 import { Experience } from '@/components/dashboard/resume-component';
-import { Plus, Trash2 } from 'lucide-react';
+import { Circle, CircleOff, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import {
   DndContext,
@@ -80,6 +80,7 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
         location: '',
         years: '',
         description: [''],
+        descriptionBullets: [true],
       },
     ]);
   };
@@ -112,11 +113,32 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
     );
   };
 
+  const handleToggleDescriptionBullet = (id: number, index: number) => {
+    onChange(
+      data.map((item) => {
+        if (item.id === id) {
+          const descriptionCount = item.description?.length || 0;
+          const bullets = Array.from(
+            { length: descriptionCount },
+            (_, bulletIndex) => item.descriptionBullets?.[bulletIndex] ?? true
+          );
+          bullets[index] = !bullets[index];
+          return { ...item, descriptionBullets: bullets };
+        }
+        return item;
+      })
+    );
+  };
+
   const handleAddDescription = (id: number) => {
     onChange(
       data.map((item) => {
         if (item.id === id) {
-          return { ...item, description: [...(item.description || []), ''] };
+          return {
+            ...item,
+            description: [...(item.description || []), ''],
+            descriptionBullets: [...(item.descriptionBullets || []), true],
+          };
         }
         return item;
       })
@@ -129,7 +151,9 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
         if (item.id === id) {
           const newDesc = [...(item.description || [])];
           newDesc.splice(index, 1);
-          return { ...item, description: newDesc };
+          const newBullets = [...(item.descriptionBullets || [])];
+          newBullets.splice(index, 1);
+          return { ...item, description: newDesc, descriptionBullets: newBullets };
         }
         return item;
       })
@@ -246,28 +270,46 @@ export const ExperienceForm: React.FC<ExperienceFormProps> = ({ data, onChange }
                           {t('builder.genericItemForm.actions.addPoint')}
                         </Button>
                       </div>
-                      {item.description?.map((desc, idx) => (
-                        <div key={idx} className="flex gap-2">
-                          <div className="flex-1">
-                            <RichTextEditor
-                              value={desc}
-                              onChange={(html) => handleDescriptionChange(item.id, idx, html)}
-                              placeholder={t('builder.forms.experience.placeholders.description')}
-                              minHeight="60px"
-                            />
+                      {item.description?.map((desc, idx) => {
+                        const showBullet = item.descriptionBullets?.[idx] ?? true;
+
+                        return (
+                          <div key={idx} className="flex gap-2">
+                            <div className="flex-1">
+                              <RichTextEditor
+                                value={desc}
+                                onChange={(html) => handleDescriptionChange(item.id, idx, html)}
+                                placeholder={t('builder.forms.experience.placeholders.description')}
+                                minHeight="60px"
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleDescriptionBullet(item.id, idx)}
+                              className="h-[60px] w-8 text-muted-foreground hover:text-foreground self-end"
+                              aria-label={showBullet ? 'Hide bullet dot' : 'Show bullet dot'}
+                              title={showBullet ? 'Hide bullet dot' : 'Show bullet dot'}
+                            >
+                              {showBullet ? (
+                                <Circle className="w-3 h-3" />
+                              ) : (
+                                <CircleOff className="w-3 h-3" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveDescription(item.id, idx)}
+                              className="h-[60px] w-8 text-muted-foreground hover:text-destructive self-end"
+                              aria-label={t('a11y.removeDescription')}
+                              title={t('a11y.removeDescription')}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveDescription(item.id, idx)}
-                            className="h-[60px] w-8 text-muted-foreground hover:text-destructive self-end"
-                            aria-label={t('a11y.removeDescription')}
-                            title={t('a11y.removeDescription')}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </DraggableListItem>

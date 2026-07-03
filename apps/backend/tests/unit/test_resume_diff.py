@@ -200,7 +200,7 @@ def test_project_entry_added() -> None:
 
 def test_education_entry_added() -> None:
     original = {"education": []}
-    improved = {"education": [{"institution": "MIT", "degree": "BS", "years": "2020", "description": None}]}
+    improved = {"education": [{"institution": "MIT", "degree": "BS", "years": "2020", "description": []}]}
 
     summary, changes = calculate_resume_diff(original, improved)
 
@@ -228,13 +228,13 @@ def test_education_description_change_is_not_duplicated() -> None:
     original = {
         "education": [
             {"institution": "MIT", "degree": "B.S. CS", "years": "2014 - 2018",
-             "description": "Graduated with honors"}
+             "description": ["Graduated with honors"]}
         ]
     }
     improved = {
         "education": [
             {"institution": "MIT", "degree": "B.S. CS", "years": "2014 - 2018",
-             "description": "Graduated with honors; focus on distributed systems"}
+             "description": ["Graduated with honors", "Focus on distributed systems"]}
         ]
     }
 
@@ -243,7 +243,7 @@ def test_education_description_change_is_not_duplicated() -> None:
     education_changes = [c for c in changes if c.field_type == "education"]
     assert len(education_changes) == 1
     assert education_changes[0].field_path == "education[0].description"
-    assert education_changes[0].change_type == "modified"
+    assert education_changes[0].change_type == "added"
 
 
 def test_language_add_remove() -> None:

@@ -81,9 +81,7 @@ _ALLOWED_PATH_PATTERNS = [
     re.compile(r"^summary$"),
     re.compile(r"^workExperience\[\d+\]\.description(\[\d+\])?$"),
     re.compile(r"^personalProjects\[\d+\]\.description(\[\d+\])?$"),
-    # Education description is a single string (Education.description: str | None),
-    # so only the scalar path is allowed — not a [j]-indexed bullet form.
-    re.compile(r"^education\[\d+\]\.description$"),
+    re.compile(r"^education\[\d+\]\.description(\[\d+\])?$"),
     re.compile(r"^additional\.technicalSkills$"),
     re.compile(r"^additional\.languages$"),
     re.compile(r"^additional\.certificationsTraining$"),
@@ -138,7 +136,7 @@ def _is_path_blocked(path: str) -> bool:
     if path.startswith("education"):
         # Education descriptions may be tailored; degree/institution/years stay
         # blocked (they are also caught by the blocked-leaf-name check above).
-        if re.match(r"^education\[\d+\]\.description$", path):
+        if re.match(r"^education\[\d+\]\.description(\[\d+\])?$", path):
             return False
         return True
 
@@ -1338,38 +1336,24 @@ def calculate_resume_diff(
             confidence="medium"
         ))
 
-    # 4b. Compare education descriptions (a single string per entry, not a list)
+    # 4b. Compare education description points
     original_education = original.get("education", [])
     improved_education = improved.get("education", [])
-    for idx in range(max(len(original_education), len(improved_education))):
-        orig_entry = original_education[idx] if idx < len(original_education) else None
-        impr_entry = improved_education[idx] if idx < len(improved_education) else None
-        orig_desc = (
-            str(orig_entry.get("description") or "").strip()
-            if isinstance(orig_entry, dict)
-            else ""
-        )
-        impr_desc = (
-            str(impr_entry.get("description") or "").strip()
-            if isinstance(impr_entry, dict)
-            else ""
-        )
-        if orig_desc == impr_desc:
+    max_education_len = max(len(original_education), len(improved_education))
+    education_confidences = DiffConfidence(added="medium", removed="low", modified="medium")
+    for idx in range(max_education_len):
+        original_entry = original_education[idx] if idx < len(original_education) else None
+        improved_entry = improved_education[idx] if idx < len(improved_education) else None
+        if not original_entry and not improved_entry:
             continue
-        if orig_desc and not impr_desc:
-            change_type = "removed"
-        elif impr_desc and not orig_desc:
-            change_type = "added"
-        else:
-            change_type = "modified"
-        changes.append(ResumeFieldDiff(
+        _append_list_changes(
+            changes,
             field_path=f"education[{idx}].description",
             field_type="education",
-            change_type=change_type,
-            original_value=orig_desc or None,
-            new_value=impr_desc or None,
-            confidence="medium",
-        ))
+            original_items=_extract_description_list(original_entry),
+            improved_items=_extract_description_list(improved_entry),
+            confidences=education_confidences,
+        )
 
     # 4c. Compare languages (order changes are intentionally ignored)
     orig_langs = _build_string_index(

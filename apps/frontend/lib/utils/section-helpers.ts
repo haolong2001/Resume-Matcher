@@ -33,27 +33,27 @@ export const DEFAULT_SECTION_META: SectionMeta[] = [
     order: 1,
   },
   {
-    id: 'workExperience',
-    key: 'workExperience',
-    displayName: 'Experience',
+    id: 'personalProjects',
+    key: 'personalProjects',
+    displayName: 'Projects',
     sectionType: 'itemList',
     isDefault: true,
     isVisible: true,
     order: 2,
   },
   {
-    id: 'education',
-    key: 'education',
-    displayName: 'Education',
+    id: 'workExperience',
+    key: 'workExperience',
+    displayName: 'Experience',
     sectionType: 'itemList',
     isDefault: true,
     isVisible: true,
     order: 3,
   },
   {
-    id: 'personalProjects',
-    key: 'personalProjects',
-    displayName: 'Projects',
+    id: 'education',
+    key: 'education',
+    displayName: 'Education',
     sectionType: 'itemList',
     isDefault: true,
     isVisible: true,
@@ -135,9 +135,21 @@ export function getSectionMeta(resumeData: ResumeData): SectionMeta[] {
  * Get sorted sections (visible only) for rendering.
  */
 export function getSortedSections(resumeData: ResumeData): SectionMeta[] {
-  return [...getSectionMeta(resumeData)]
+  const sorted = [...getSectionMeta(resumeData)]
     .filter((s) => s.isVisible)
     .sort((a, b) => a.order - b.order);
+
+  const educationIndex = sorted.findIndex((section) => section.key === 'education');
+  const projectsIndex = sorted.findIndex((section) => section.key === 'personalProjects');
+
+  if (educationIndex !== -1 && projectsIndex !== -1 && educationIndex !== projectsIndex) {
+    [sorted[educationIndex], sorted[projectsIndex]] = [
+      sorted[projectsIndex],
+      sorted[educationIndex],
+    ];
+  }
+
+  return sorted;
 }
 
 /**

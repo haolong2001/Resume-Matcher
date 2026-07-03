@@ -53,7 +53,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         blockquote: false,
         codeBlock: false,
         horizontalRule: false,
-        hardBreak: false,
         // StarterKit v3 bundles link + underline; we register them explicitly
         // below (Link with custom openOnClick/HTMLAttributes), so disable the
         // bundled ones to avoid "Duplicate extension names" warnings.
@@ -73,8 +72,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     onUpdate: ({ editor }) => {
       isInternalUpdateRef.current = true;
       const html = editor.getHTML();
-      // Convert <p> tags to plain content since we're in bullet mode
-      const cleanHtml = html.replace(/<p>/g, '').replace(/<\/p>/g, '').trim();
+      // Convert paragraph breaks to <br /> and strip outer <p> tags
+      const cleanHtml = html
+        .replace(/<\/p><p>/g, '<br />')
+        .replace(/<p>/g, '')
+        .replace(/<\/p>/g, '')
+        .trim();
       onChange(cleanHtml);
       // Reset flag after a tick to ensure it stays true through the render cycle
       setTimeout(() => {

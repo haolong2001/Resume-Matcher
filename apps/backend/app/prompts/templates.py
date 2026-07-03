@@ -480,7 +480,8 @@ PATHS you can target:
 - "workExperience[i].description" — append a new bullet (action: "append")
 - "personalProjects[i].description[j]" — a specific project bullet
 - "personalProjects[i].description" — append a new project bullet (action: "append")
-- "education[i].description" — the education entry's description text (replace only; it is a single string, not a list)
+- "education[i].description[j]" — the j-th education description bullet
+- "education[i].description" — append a new education bullet (action: "append")
 - "additional.technicalSkills" — reorder the skills list (action: "reorder") or add one verified skill (action: "add_skill")
 - "additional.languages" — reorder the languages list (action: "reorder")
 - "additional.certificationsTraining" — reorder the certifications list (action: "reorder")

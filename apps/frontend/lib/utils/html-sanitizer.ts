@@ -3,7 +3,7 @@ import DOMPurify from 'isomorphic-dompurify';
 /**
  * Whitelist of allowed HTML tags for rich text content
  */
-const ALLOWED_TAGS = ['strong', 'em', 'u', 'a'];
+const ALLOWED_TAGS = ['strong', 'em', 'u', 'a', 'br'];
 
 /**
  * Whitelist of allowed HTML attributes

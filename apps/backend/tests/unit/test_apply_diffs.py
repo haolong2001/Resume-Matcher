@@ -614,36 +614,37 @@ class TestApplyDiffsEdgeCases:
 class TestApplyDiffsNewPaths:
     """Newly allowed paths for issue #805 (broader diff scope, casing preserved)."""
 
-    def test_replace_education_description(self, sample_resume):
-        """Education description (a single string) should be replaceable."""
+    def test_replace_education_description_bullet(self, sample_resume):
+        """Education description bullets should be replaceable via indexed paths."""
         changes = [
             ResumeChange(
-                path="education[0].description",
+                path="education[0].description[0]",
                 action="replace",
-                original=sample_resume["education"][0]["description"],
-                value="Graduated with honors; focus on distributed systems and APIs",
+                original=sample_resume["education"][0]["description"][0],
+                value="Graduated with honors and focused on distributed systems",
                 reason="surface relevant coursework",
             )
         ]
         result, applied, rejected = apply_diffs(sample_resume, changes)
         assert len(applied) == 1
         assert len(rejected) == 0
-        assert result["education"][0]["description"] == changes[0].value
+        assert result["education"][0]["description"][0] == changes[0].value
 
-    def test_reject_education_description_list_index(self, sample_resume):
-        """Education description is a scalar string, so the [j] bullet form is not allowed."""
+    def test_append_education_description_bullet(self, sample_resume):
+        """Education description bullets should support append."""
         changes = [
             ResumeChange(
-                path="education[0].description[0]",
-                action="replace",
-                original="Graduated with honors, Dean's List",
-                value="anything",
+                path="education[0].description",
+                action="append",
+                original=None,
+                value="Relevant coursework in distributed systems",
                 reason="test",
             )
         ]
-        _result, applied, rejected = apply_diffs(sample_resume, changes)
-        assert len(applied) == 0
-        assert len(rejected) == 1
+        result, applied, rejected = apply_diffs(sample_resume, changes)
+        assert len(applied) == 1
+        assert len(rejected) == 0
+        assert result["education"][0]["description"][-1] == changes[0].value
 
     def test_reorder_languages(self, sample_resume):
         """Languages list should be reorderable (same items, new order)."""

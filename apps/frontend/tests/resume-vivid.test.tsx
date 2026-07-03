@@ -7,6 +7,14 @@ vi.mock('@/lib/i18n', () => ({ useTranslations: () => ({ t: (k: string) => k }) 
 
 const data: ResumeData = {
   personalInfo: { name: 'Saurabh Rai', title: 'Solutions Architect', email: 'a@b.com' },
+  education: [
+    {
+      id: 1,
+      institution: 'NUS',
+      degree: 'BSc Computer Science',
+      years: '2020-2024',
+    },
+  ],
   workExperience: [
     {
       id: 1,
@@ -43,5 +51,14 @@ describe('ResumeVivid', () => {
     // Meta should be just the location, never "| Remote".
     expect(screen.getByText('Remote')).toBeInTheDocument();
     expect(screen.queryByText('| Remote')).toBeNull();
+  });
+
+  it('renders education before experience', () => {
+    render(<ResumeVivid data={data} />);
+    const educationHeading = screen.getByText('Education');
+    const experienceHeading = screen.getByText('Experience');
+    expect(
+      educationHeading.compareDocumentPosition(experienceHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });

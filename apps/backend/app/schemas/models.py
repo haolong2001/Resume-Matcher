@@ -140,11 +140,31 @@ class Experience(BaseModel):
     location: str | None = None
     years: str = ""
     description: list[str] = Field(default_factory=list)
+    descriptionBullets: list[bool] = Field(default_factory=list)
 
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @field_validator("descriptionBullets", mode="before")
+    @classmethod
+    def _normalize_description_bullets(cls, value: Any) -> list[bool]:
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            return []
+        return [bool(item) for item in value]
+
+    @model_validator(mode="after")
+    def _sync_description_bullets(self) -> "Experience":
+        bullet_count = len(self.descriptionBullets)
+        description_count = len(self.description)
+        if bullet_count < description_count:
+            self.descriptionBullets.extend([True] * (description_count - bullet_count))
+        elif bullet_count > description_count:
+            self.descriptionBullets = self.descriptionBullets[:description_count]
+        return self
 
 
 class Education(BaseModel):
@@ -154,12 +174,12 @@ class Education(BaseModel):
     institution: str = ""
     degree: str = ""
     years: str = ""
-    description: str | None = None
+    description: list[str] = Field(default_factory=list)
 
     @field_validator("description", mode="before")
     @classmethod
-    def _normalize_description(cls, value: Any) -> str | None:
-        return _coerce_optional_text(value)
+    def _normalize_description(cls, value: Any) -> list[str]:
+        return _coerce_string_list(value)
 
 
 class Project(BaseModel):
@@ -285,18 +305,18 @@ DEFAULT_SECTION_META: list[dict[str, Any]] = [
         "order": 1,
     },
     {
-        "id": "workExperience",
-        "key": "workExperience",
-        "displayName": "Experience",
+        "id": "education",
+        "key": "education",
+        "displayName": "Education",
         "sectionType": SectionType.ITEM_LIST,
         "isDefault": True,
         "isVisible": True,
         "order": 2,
     },
     {
-        "id": "education",
-        "key": "education",
-        "displayName": "Education",
+        "id": "workExperience",
+        "key": "workExperience",
+        "displayName": "Experience",
         "sectionType": SectionType.ITEM_LIST,
         "isDefault": True,
         "isVisible": True,
@@ -794,4 +814,3 @@ class CreateFromMasterResponse(BaseModel):
     resume_id: str
     title: str
     processing_status: str
-

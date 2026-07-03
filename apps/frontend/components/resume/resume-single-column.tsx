@@ -34,7 +34,7 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
   const { personalInfo, summary, workExperience, education, personalProjects, additional } = data;
 
   // Get sorted visible sections
-  const sortedSections = getSortedSections(data);
+  const renderedSections = getSortedSections(data);
 
   // Icon mapping for contact types
   const contactIcons: Record<string, React.ReactNode> = {
@@ -89,6 +89,26 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
     );
   };
 
+  const renderDescriptionPoints = (items?: string[], bullets?: boolean[]) => {
+    if (!items || items.length === 0) return null;
+
+    return (
+      <ul className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-sm']}`}>
+        {items.map((desc, index) => {
+          const showBullet = bullets?.[index] ?? true;
+          return (
+            <li key={index} className="flex">
+              {showBullet && <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>}
+              <span>
+                <SafeHtml html={desc} />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
   // Render a section based on its key
   const renderSection = (section: SectionMeta) => {
     switch (section.key) {
@@ -127,20 +147,7 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
                     <span>{exp.company}</span>
                     {exp.location && <span>{exp.location}</span>}
                   </div>
-                  {exp.description && exp.description.length > 0 && (
-                    <ul
-                      className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-sm']}`}
-                    >
-                      {exp.description.map((desc, index) => (
-                        <li key={index} className="flex">
-                          <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
-                          <span>
-                            <SafeHtml html={desc} />
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {renderDescriptionPoints(exp.description, exp.descriptionBullets)}
                 </div>
               ))}
             </div>
@@ -255,8 +262,19 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
                   >
                     <span>{edu.degree}</span>
                   </div>
-                  {edu.description && (
-                    <p className={baseStyles['resume-text-sm']}>{edu.description}</p>
+                  {edu.description && edu.description.length > 0 && (
+                    <ul
+                      className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-sm']}`}
+                    >
+                      {edu.description.map((desc, index) => (
+                        <li key={index} className="flex">
+                          <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
+                          <span>
+                            <SafeHtml html={desc} />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               ))}
@@ -348,7 +366,7 @@ export const ResumeSingleColumn: React.FC<ResumeSingleColumnProps> = ({
       )}
 
       {/* Render sections in order based on sectionMeta */}
-      {sortedSections
+      {renderedSections
         .filter((section) => section.key !== 'personalInfo')
         .map((section) => renderSection(section))}
     </div>
@@ -374,10 +392,18 @@ const AdditionalSection: React.FC<{
 
   // Drop blank/whitespace-only entries so empty lines (e.g. from editing in the
   // builder) never render in the resume or PDF (issue #763).
-  const technicalSkills = rawTechnicalSkills.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
-  const languages = rawLanguages.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
-  const certificationsTraining = rawCertificationsTraining.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
-  const awards = rawAwards.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  const technicalSkills = rawTechnicalSkills.filter(
+    (item): item is string => typeof item === 'string' && item.trim() !== ''
+  );
+  const languages = rawLanguages.filter(
+    (item): item is string => typeof item === 'string' && item.trim() !== ''
+  );
+  const certificationsTraining = rawCertificationsTraining.filter(
+    (item): item is string => typeof item === 'string' && item.trim() !== ''
+  );
+  const awards = rawAwards.filter(
+    (item): item is string => typeof item === 'string' && item.trim() !== ''
+  );
 
   const mergedLabels: AdditionalSectionLabels = {
     technicalSkills: labels?.technicalSkills ?? 'Technical Skills:',
@@ -394,34 +420,29 @@ const AdditionalSection: React.FC<{
 
   if (!hasContent) return null;
 
+  const renderLabeledLines = (label: string, items: string[]) => {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="flex items-start">
+        <span className="font-bold w-32 shrink-0">{label}</span>
+        <div className="flex-1">
+          {items.map((item, index) => (
+            <div key={`${label}-${index}`}>{item}</div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={baseStyles['resume-section']}>
       <h3 className={baseStyles['resume-section-title']}>{displayName}</h3>
       <div className={`${baseStyles['resume-stack']} ${baseStyles['resume-text-sm']}`}>
-        {technicalSkills.length > 0 && (
-          <div className="flex">
-            <span className="font-bold w-32 shrink-0">{mergedLabels.technicalSkills}</span>
-            <span>{technicalSkills.join(', ')}</span>
-          </div>
-        )}
-        {languages.length > 0 && (
-          <div className="flex">
-            <span className="font-bold w-32 shrink-0">{mergedLabels.languages}</span>
-            <span>{languages.join(', ')}</span>
-          </div>
-        )}
-        {certificationsTraining.length > 0 && (
-          <div className="flex">
-            <span className="font-bold w-32 shrink-0">{mergedLabels.certifications}</span>
-            <span>{certificationsTraining.join(', ')}</span>
-          </div>
-        )}
-        {awards.length > 0 && (
-          <div className="flex">
-            <span className="font-bold w-32 shrink-0">{mergedLabels.awards}</span>
-            <span>{awards.join(', ')}</span>
-          </div>
-        )}
+        {renderLabeledLines(mergedLabels.technicalSkills, technicalSkills)}
+        {renderLabeledLines(mergedLabels.languages, languages)}
+        {renderLabeledLines(mergedLabels.certifications, certificationsTraining)}
+        {renderLabeledLines(mergedLabels.awards, awards)}
       </div>
     </div>
   );

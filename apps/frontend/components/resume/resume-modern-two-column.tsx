@@ -40,11 +40,22 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
 
   // Drop blank/whitespace-only entries so empty lines (e.g. from editing in the
   // builder) never render in the resume or PDF (issue #763).
-  const technicalSkills = additional?.technicalSkills?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
-  const languages = additional?.languages?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
+  const technicalSkills =
+    additional?.technicalSkills?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
+  const languages =
+    additional?.languages?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
   const certificationsTraining =
-    additional?.certificationsTraining?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
-  const awards = additional?.awards?.filter((item): item is string => typeof item === 'string' && item.trim() !== '') ?? [];
+    additional?.certificationsTraining?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
+  const awards =
+    additional?.awards?.filter(
+      (item): item is string => typeof item === 'string' && item.trim() !== ''
+    ) ?? [];
 
   // Get sorted visible sections
   const sortedSections = getSortedSections(data);
@@ -167,6 +178,46 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
                 {getSectionDisplayName('summary', headingFallbacks.summary)}
               </h3>
               <p className={`text-justify ${baseStyles['resume-text']}`}>{summary}</p>
+            </div>
+          )}
+
+          {/* Education Section */}
+          {isSectionVisible('education') && education && education.length > 0 && (
+            <div className={baseStyles['resume-section']}>
+              <h3 className={styles.sectionTitleAccent}>
+                {getSectionDisplayName('education', headingFallbacks.education)}
+              </h3>
+              <div className={baseStyles['resume-stack']}>
+                {education.map((edu) => (
+                  <div key={edu.id}>
+                    <h4 className={baseStyles['resume-item-title-sm']}>{edu.institution}</h4>
+                    <div
+                      className={`${baseStyles['resume-row-tight']} ${baseStyles['resume-item-subtitle-sm']}`}
+                    >
+                      <span>{edu.degree}</span>
+                      {edu.years && (
+                        <span className={`${baseStyles['resume-date']} ml-2`}>
+                          {formatDateRange(edu.years)}
+                        </span>
+                      )}
+                    </div>
+                    {edu.description && edu.description.length > 0 && (
+                      <ul
+                        className={`ml-4 ${baseStyles['resume-list']} ${baseStyles['resume-text-xs']}`}
+                      >
+                        {edu.description.map((desc, index) => (
+                          <li key={index} className="flex">
+                            <span className="mr-1.5 flex-shrink-0">•&nbsp;</span>
+                            <span>
+                              <SafeHtml html={desc} />
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -330,42 +381,6 @@ export const ResumeModernTwoColumn: React.FC<ResumeModernTwoColumnProps> = ({
 
         {/* Sidebar Column - Right */}
         <div className={styles.sidebarColumn}>
-          {/* Education Section */}
-          {isSectionVisible('education') && education && education.length > 0 && (
-            <div className={baseStyles['resume-section']}>
-              <h3
-                className={`${baseStyles['resume-section-title-sm']} text-[var(--resume-accent-primary)]`}
-              >
-                {getSectionDisplayName('education', headingFallbacks.education)}
-              </h3>
-              <div className={baseStyles['resume-stack']}>
-                {education.map((edu) => (
-                  <div key={edu.id}>
-                    <h4
-                      className={`${baseStyles['resume-item-title-sm']} ${baseStyles['sidebar-text-wrap']}`}
-                    >
-                      {edu.institution}
-                      {edu.years && (
-                        <span
-                          className={`font-normal ${baseStyles['resume-date']} ${baseStyles['text-muted']}`}
-                        >
-                          {' '}
-                          | {formatDateRange(edu.years)}
-                        </span>
-                      )}
-                    </h4>
-                    <p className={baseStyles['resume-item-subtitle-sm']}>{edu.degree}</p>
-                    {edu.description && (
-                      <p className={`${baseStyles['resume-text-xs']} ${baseStyles['resume-meta']}`}>
-                        {edu.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Skills Section */}
           {isSectionVisible('additional') && technicalSkills.length > 0 && (
             <div className={baseStyles['resume-section']}>

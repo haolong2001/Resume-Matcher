@@ -67,16 +67,19 @@
 
 .resume-text {
   font-family: var(--body-font);
+  white-space: pre-wrap;
 }
 
 .resume-text-sm {
   font-family: var(--body-font);
   font-size: calc(var(--font-size-base) * 0.92);
+  white-space: pre-wrap;
 }
 
 .resume-text-xs {
   font-family: var(--body-font);
   font-size: calc(var(--font-size-base) * 0.82);
+  white-space: pre-wrap;
 }
 
 .resume-item-title {

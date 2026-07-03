@@ -24,13 +24,14 @@ interface ProcessedResume {
     location?: string | null;
     years?: string;
     description?: string[];
+    descriptionBullets?: boolean[];
   }>;
   education?: Array<{
     id: number;
     institution?: string;
     degree?: string;
     years?: string;
-    description?: string | null;
+    description?: string[];
   }>;
   personalProjects?: Array<{
     id: number;
@@ -392,4 +393,3 @@ export async function createResumeFromMaster(
   }
   return res.json();
 }
-

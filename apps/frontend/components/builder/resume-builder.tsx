@@ -47,7 +47,13 @@ import { useTranslations } from '@/lib/i18n';
 import { type TemplateSettings, DEFAULT_TEMPLATE_SETTINGS } from '@/lib/types/template-settings';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
-import { buildResumeFilename, downloadBlobAsFile, openUrlInNewTab, getCompanyFromTitle, sanitizeFilename } from '@/lib/utils/download';
+import {
+  buildResumeFilename,
+  downloadBlobAsFile,
+  openUrlInNewTab,
+  getCompanyFromTitle,
+  sanitizeFilename,
+} from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
 
 type TabId = 'resume' | 'cover-letter' | 'outreach' | 'jd-match';
@@ -401,11 +407,12 @@ const ResumeBuilderContent = () => {
     setTemplateSettings(newSettings);
   }, []);
 
-  const handleSave = async () => {
+  const persistResume = async (): Promise<ResumeData | null> => {
     if (!resumeId) {
       showNotification(t('builder.alerts.saveNotAvailable'), 'warning');
-      return;
+      return null;
     }
+
     try {
       setIsSaving(true);
       const updated = await updateResume(resumeId, resumeData);
@@ -417,12 +424,18 @@ const ResumeBuilderContent = () => {
       if (updated.title) {
         setResumeTitle(updated.title);
       }
+      return nextData;
     } catch (error) {
       console.error('Failed to save resume:', error);
       showNotification(t('builder.alerts.saveFailed'), 'danger');
+      return null;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    await persistResume();
   };
 
   const handleReset = () => {
@@ -437,12 +450,22 @@ const ResumeBuilderContent = () => {
       return;
     }
     try {
+      let downloadData = resumeData;
+      if (hasUnsavedChanges) {
+        const savedData = await persistResume();
+        if (!savedData) {
+          return;
+        }
+        downloadData = savedData;
+      }
+
       setIsDownloading(true);
       const blob = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
-      const userName = resumeData.personalInfo?.name?.trim() || null;
-      const filename = isTailoredResume && resumeTitle
-        ? sanitizeFilename(resumeTitle, resumeId, 'resume')
-        : buildResumeFilename(userName, null, resumeId, 'resume');
+      const userName = downloadData.personalInfo?.name?.trim() || null;
+      const filename =
+        isTailoredResume && resumeTitle
+          ? sanitizeFilename(resumeTitle, resumeId, 'resume')
+          : buildResumeFilename(userName, null, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
     } catch (error) {
@@ -664,10 +687,14 @@ const ResumeBuilderContent = () => {
                     variant="success"
                     size="sm"
                     onClick={handleDownload}
-                    disabled={!resumeId || isDownloading}
+                    disabled={!resumeId || isSaving || isDownloading}
                   >
                     <Download className="w-4 h-4" />
-                    {isDownloading ? t('common.generating') : t('common.download')}
+                    {isSaving
+                      ? t('common.saving')
+                      : isDownloading
+                        ? t('common.generating')
+                        : t('common.download')}
                   </Button>
                 </>
               )}
